@@ -1,4 +1,4 @@
-# Portfolio with Next.js 13, Sanity.io, TailwindCSS, and TypeScript
+# Configuration with Next.js 13, Sanity.io, TailwindCSS, and TypeScript
 
 ## NEXT.JS 13
 
