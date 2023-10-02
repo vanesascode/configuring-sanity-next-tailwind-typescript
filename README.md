@@ -198,3 +198,193 @@ const project = {
 export default project;
 
 ```
+
+## Displaying data
+
+We create the file `sanity-utils.ts` in the sanity folder and in this file we're going to put all the functions that we're going to use to go `grab data`:
+
+```
+import { groq, createClient } from "next-sanity";
+
+export async function getProjects() {
+  const client = createClient({
+    projectId: "7wqo6kcr",
+    dataset: "production",
+    apiVersion: "2023-10-01",
+  });
+
+  return client.fetch(
+    groq`*[_type == "project"] {
+      _id,
+      _createAt,
+      name,
+      "slug": slug.current,
+      "image": image.asset->url,
+      url,
+      content
+    }`
+  );
+};
+
+```
+
+This code imports the groq and createClient functions from the "next-sanity" package.
+
+It defines an asynchronous function called getProjects that creates a Sanity client using the createClient function. The createClient function takes an object with the projectId, dataset, and apiVersion properties.
+
+`The getProjects function then uses the Sanity client to fetch data from the Sanity API` using a `GROQ query`.
+
+The GROQ query fetches an `array` of objects with properties such as \_id, \_createAt, name, slug, image, url, and content.
+
+## Dealing with Typescript
+
+At this point, trying to map our data into the main page.tsx file, we encounter a type error in the word project:
+
+```
+import { getProjects } from "@/sanity/sanity-utils";
+
+export default async function Home() {
+  const projects = await getProjects();
+
+  return (
+    <div>
+      {projects.map((project) => (
+        <div key={project._id}>{project.name}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+So, we are going to have a folder to deal with our types. We create a folder called `types` and inside a file called `Project.ts`.
+
+In it, we create our type 'Project':
+
+```
+import { PortableTextBlock } from "sanity";
+
+export type Project = {
+  _id: string;
+  _createdAt: string;
+  name: string;
+  slug: string;
+  image: string;
+  url: string;
+  content: PortableTextBlock[];
+};
+
+```
+
+And then, 👉 instead of having to especify it everytime we need to use the type Project, (in our page.tsx now, for example) we do it just once in our `sanity-utils.ts` file:
+
+```
+import { Project } from "@/types/Project";
+import { groq, createClient } from "next-sanity";
+
+export async function getProjects(): Promise<Project[]> {...etc
+```
+
+Now, the code imports the Project type from the "@/types/Project" module, indicating that the Project type is defined in a separate module and can be used in this file. And the getProjects function returns `a Promise of type Project[]`.
+
+## TAILWIND
+
+Install it [(go to docs and choose NEXT)](https://tailwindcss.com/docs/installation/framework-guides)
+
+- [x] run: `npm install -D tailwindcss postcss autoprefixer`
+- [x] create a config file: `npx tailwindcss init -p`
+
+Also, paste this in your css file:
+
+```
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+```
+
+### Max-width
+
+1280px and 1920px are the two standard widths for web design. A 1280px website will look great on laptops and mobile devices but not so great on large monitors. To ensure your site looks just as good on big screens as it does on small screens, set your max site width to `1920px` or more:
+
+```
+<div className="max-w-[1920px] mx-auto">
+ </div>
+```
+
+To make `eslint` happy, use entities:
+
+```
+  <h1>Hello I&apos;m vanesascode! </h1>
+```
+
+### Gradient texts
+
+```
+ <span className="bg-gradient-to-r from-blue-500 via-purple-600 to-pink-500 bg-clip-text text-transparent">
+```
+
+### Don't use <img/> in Next, use <Image/>
+
+Compared to the regular <img> tag, the `Image` component offers several benefits:
+
+Image Optimization: Next.js automatically optimizes and optimally serves the images based on the device size and screen resolution. It generates multiple optimized versions of the image and delivers the most appropriate one to the client.
+
+Lazy Loading: The Image component supports lazy loading by default, meaning that images are loaded only when they are visible in the viewport. This improves the performance of your application, especially when there are many images on a page.
+
+Automatic Image Optimization: Next.js optimizes images by default. It applies techniques like image compression, responsive image loading, and automatic format selection to ensure the best performance and user experience.
+
+Accessibility: The Image component provides built-in accessibility features. It automatically adds the required alt attribute to the rendered <img> tag based on the alt prop you provide. This helps improve the accessibility of your application.
+
+### Sanity images config in Next
+
+So there are no problems showing images in the client from Sanity, we add this remote pattern for them:
+
+```
+/** @type {import('next').NextConfig} */
+const nextConfig = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "cdn.sanity.io",
+        port: "",
+      }
+    ],
+  },
+}
+
+module.exports = nextConfig
+
+```
+
+👉 If still, your data is not being refreshed in the client, make a `hard refresh` : Pressing `Ctrl + F5 (Windows)` or `Cmd + Shift + R (Mac)` in your web browser will perform a hard refresh.
+
+## Individual project pages
+
+We added a 'Link' to our cards with this route:
+
+```
+  <Link
+    href={`/projects/${project.slug}`}
+```
+
+So now we have to create the folders. Within app, call it `projects/[projects]/page.tsx`
+This file path tells us that we have the `dynamic route`(${project.slug})
+
+In the page, we code this for a start:
+
+```
+type Props = {
+  params: {
+    project: string;
+  };
+};
+
+export default async function ProjectsPage({ params }: Props) {
+  const slug = params.project;
+  const project = await getProjects(slug);
+
+  return <div>hello world</div>;
+}
+```
+
+However, the 'getProjects' function will give us the error that cannot be found. So, we add it to our `sanity-utils.ts` file:
